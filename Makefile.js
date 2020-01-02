@@ -3,13 +3,18 @@
 "use strict";
 
 require("shelljs/make");
-const { cd, echo, env, exec, exit, mkdir, rm } = require("shelljs");
+const { cd, echo, env, exit, mkdir, rm } = require("shelljs");
+const { execSync } = require("child_process");
 
 function setJsonField(filePath, key, value) {
   require("fs").writeFileSync(
     filePath,
     `${JSON.stringify({ ...require(filePath), [key]: value }, null, 2)}\n`
   );
+}
+
+function exec(cmd) {
+  execSync(cmd, { stdio: "inherit", encoding: "utf8" });
 }
 
 const FLOW_COMMIT = "09669846b7a7ca5a6c23c12d56bb3bebdafd67e9";
@@ -457,6 +462,23 @@ target.bootstrap = function() {
   target.build();
 };
 
+target.cleanAll = function() {
+  rm("-rf", "package-lock.json");
+  rm("-rf", ".changelog");
+
+  for (const source in SOURCES) {
+    // TODO: Don't delete eslint/*/lib when they use src
+    if (source === "eslint") {
+      continue;
+    }
+
+    rm("-rf", `${source}/*/node_modules`);
+    rm("-rf", `${source}/*/package-lock.json`);
+  }
+
+  target.clean();
+};
+
 target.cleanLib = function() {
   for (const source in SOURCES) {
     // TODO: Don't delete eslint/*/lib when they use src
@@ -475,24 +497,6 @@ target.cleanRuntimeHelpers = function() {
   rm("-f", "packages/babel-runtime-corejs2/helpers/**/*.js");
   rm("-f", "packages/babel-runtime-corejs3/helpers/**/*.js");
   rm("-rf", "packages/babel-runtime-corejs2/core-js");
-};
-
-target.cleanAll = function() {
-  // rm("-rf", "node_modules");
-  rm("-rf", "package-lock.json");
-  rm("-rf", ".changelog");
-
-  for (const source in SOURCES) {
-    // TODO: Don't delete eslint/*/lib when they use src
-    if (source === "eslint") {
-      continue;
-    }
-
-    rm("-rf", `${source}/*/node_modules`);
-    rm("-rf", `${source}/*/package-lock.json`);
-  }
-
-  target.clean();
 };
 
 target.updateEnvCorejsFixture = function() {
