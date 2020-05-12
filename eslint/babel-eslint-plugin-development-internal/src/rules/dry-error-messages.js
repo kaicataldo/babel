@@ -99,9 +99,17 @@ export default {
     const filename = getFilename();
     const importedBindings = new Set();
 
+    if (!path.isAbsolute(errorModule)) {
+      report({ message: "`errorModule` must be an absolute path." });
+    }
+
     return {
       // Check imports up front so that we don't have to check them for every ThrowStatement.
       ImportDeclaration(node) {
+        if (filename === errorModule) {
+          return;
+        }
+
         if (isErrorModule(errorModule, filename, node.source.value)) {
           for (const spec of node.specifiers) {
             importedBindings.add(spec);
@@ -109,6 +117,10 @@ export default {
         }
       },
       "ThrowStatement > CallExpression[callee.type='MemberExpression']"(node) {
+        if (filename === errorModule) {
+          return;
+        }
+
         if (
           node.callee.object.type !== "ThisExpression" ||
           node.callee.property.name !== "raise"
